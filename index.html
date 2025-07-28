@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout Retest Trading Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --light: #f3f4f6;
+            --dark: #1f2937;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .step {
+            border-left: 3px solid var(--primary);
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            transition: all 0.3s ease;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-success {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: var(--secondary-dark);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        input, select, textarea {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        .tab-active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .win {
+            border-left-color: var(--secondary) !important;
+        }
+
+        .loss {
+            border-left-color: var(--danger) !important;
+        }
+
+        .journal-entry {
+            border-left: 4px solid #cbd5e1;
+            transition: all 0.3s ease;
+        }
+
+        .journal-entry:hover {
+            transform: translateX(5px);
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-day.has-trades {
+            background-color: rgba(79, 70, 229, 0.1);
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            cursor: pointer;
+        }
+
+        .calendar-day.has-trades:hover {
+            background-color: rgba(79, 70, 229, 0.2);
+            transform: scale(1.05);
+        }
+
+        .quick-note {
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s ease;
+        }
+
+        .quick-note:hover {
+            background-color: var(--light);
+            transform: translateY(-2px);
+        }
+
+        .stat-card {
+            border-radius: 1rem;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(145deg, #f9fafb, #ffffff);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* For print/PDF */
+        @media print {
+            body {
+                background-color: white;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: 1px solid #e5e7eb;
+                break-inside: avoid;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-center mt-8 mb-10 text-indigo-700">
+            <i class="fas fa-chart-line mr-2"></i> Breakout Retest Trading Assistant
+        </h1>
+        
+        <div class="flex flex-wrap mb-6 border-b">
+            <div class="tab cursor-pointer px-4 py-3 text-center flex-grow tab-active" data-tab="strategy">
+                <i class="fas fa-book-open mr-2"></i> Strategy Guide
+            </div>
+            <div class="tab cursor-pointer px-4 py-3 text-center flex-grow" data-tab="journal">
+                <i class="fas fa-journal-whills mr-2"></i> Trade Journal
+            </div>
+            <div class="tab cursor-pointer px-4 py-3 text-center flex-grow" data-tab="calendar">
+                <i class="fas fa-calendar-alt mr-2"></i> Calendar
+            </div>
+            <div class="tab cursor-pointer px-4 py-3 text-center flex-grow" data-tab="stats">
+                <i class="fas fa-chart-pie mr-2"></i> Statistics
+            </div>
+        </div>
+
+        <!-- STRATEGY GUIDE TAB -->
+        <div id="strategy" class="tab-content fade-in">
+            <div class="card p-6 mb-6">
+                <p class="text-lg"><span class="font-semibold">Welcome to the Retest Strategy!</span> Follow each step and record your trade details as you go.</p>
+            </div>
+
+            <!-- STEP 1: BREAKOUT -->
+            <div class="card p-6 mb-6" id="breakoutSection">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-700 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i> Step 1: Find a Strong Breakout
+                </h2>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">1.1</span> Look for a <span class="font-semibold">clean breakout</span> from a consolidation zone
+                </div>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">1.2</span> Confirm with <span class="font-semibold">high volume</span> on the breakout
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mt-6">
+                    <h3 class="text-xl font-semibold mb-4">Record Your Breakout</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Symbol/Pair:</label>
+                            <select id="symbol" class="w-full p-2 rounded-md">
+                                <option value="">Select a pair</option>
+                                <option value="BTC/USDT">BTC/USDT</option>
+                                <option value="ETH/USDT">ETH/USDT</option>
+                                <option value="SOL/USDT">SOL/USDT</option>
+                                <option value="other">Other (specify)</option>
+                            </select>
+                            <input type="text" id="customSymbol" class="w-full p-2 mt-2 rounded-md hidden" placeholder="Enter custom pair">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Breakout Price:</label>
+                            <input type="number" id="breakoutPrice" step="0.0001" class="w-full p-2 rounded-md" placeholder="Price level">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Breakout Volume:</label>
+                            <select id="breakoutVolume" class="w-full p-2 rounded-md">
+                                <option value="high">High Volume (Confirmed)</option>
+                                <option value="low">Low Volume (Avoid)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date/Time:</label>
+                            <input type="datetime-local" id="breakoutTime" class="w-full p-2 rounded-md">
+                        </div>
+                    </div>
+                    
+                    <button id="breakoutButton" class="btn btn-primary mt-6 w-full sm:w-auto">
+                        <i class="fas fa-arrow-right mr-2"></i> Save & Continue
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: ZONE -->
+            <div id="zoneSection" class="card p-6 mb-6 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-700 flex items-center">
+                    <i class="fas fa-bullseye mr-2"></i> Step 2: Mark the Breakout Zone
+                </h2>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">2.1</span> Draw a <span class="font-semibold">ZONE</span> (not just a line) including wicks
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mt-6">
+                    <h3 class="text-xl font-semibold mb-4">Define Your Zone</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Zone High:</label>
+                            <input type="number" id="zoneHigh" step="0.0001" class="w-full p-2 rounded-md" placeholder="Upper zone level">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Zone Low:</label>
+                            <input type="number" id="zoneLow" step="0.0001" class="w-full p-2 rounded-md" placeholder="Lower zone level">
+                        </div>
+                    </div>
+                    
+                    <button id="zoneButton" class="btn btn-primary mt-6 w-full sm:w-auto">
+                        <i class="fas fa-arrow-right mr-2"></i> Save & Continue
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3: RETEST -->
+            <div id="retestSection" class="card p-6 mb-6 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-700 flex items-center">
+                    <i class="fas fa-undo mr-2"></i> Step 3: Wait for the First Retest
+                </h2>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">3.1</span> Watch for price to return to the zone
+                </div>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">3.2</span> Check for <span class="font-semibold">low volume</span> on the pullback
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mt-6">
+                    <h3 class="text-xl font-semibold mb-4">Record the Retest</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Retest Volume:</label>
+                            <select id="retestVolume" class="w-full p-2 rounded-md">
+                                <option value="low">Low Volume (Good)</option>
+                                <option value="high">High Volume (Avoid)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Retest Price:</label>
+                            <input type="number" id="retestPrice" step="0.0001" class="w-full p-2 rounded-md" placeholder="Price at retest">
+                        </div>
+                    </div>
+                    
+                    <button id="retestButton" class="btn btn-primary mt-6 w-full sm:w-auto">
+                        <i class="fas fa-arrow-right mr-2"></i> Save & Continue
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 4: CONFIRMATION -->
+            <div id="confirmationSection" class="card p-6 mb-6 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-700 flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i> Step 4: Get Confirmation Before Entering
+                </h2>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">4.1</span> Wait for a <span class="font-semibold">clear signal</span> (engulfing or pin bar)
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mt-6">
+                    <h3 class="text-xl font-semibold mb-4">Enter Your Trade</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Signal Type:</label>
+                            <select id="signalType" class="w-full p-2 rounded-md">
+                                <option value="engulfing">Engulfing Candle</option>
+                                <option value="pinbar">Pin Bar</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Entry Price:</label>
+                            <input type="number" id="entryPrice" step="0.0001" class="w-full p-2 rounded-md" placeholder="Your entry price">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Stop Loss:</label>
+                            <input type="number" id="stopLoss" step="0.0001" class="w-full p-2 rounded-md" placeholder="Stop loss price">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Take Profit:</label>
+                            <input type="number" id="takeProfit" step="0.0001" class="w-full p-2 rounded-md" placeholder="Take profit price">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Position Size (% of capital):</label>
+                            <input type="number" id="positionSize" min="1" max="100" value="2" class="w-full p-2 rounded-md">
+                        </div>
+                    </div>
+                    
+                    <button id="enterTradeButton" class="btn btn-primary mt-6 w-full sm:w-auto">
+                        <i class="fas fa-arrow-right mr-2"></i> Enter Trade
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 5: TRADE MANAGEMENT -->
+            <div id="managementSection" class="card p-6 mb-6 hidden">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-700 flex items-center">
+                    <i class="fas fa-hand-holding-usd mr-2"></i> Step 5: Trade Management
+                </h2>
+                <div class="step mb-4">
+                    <span class="font-bold text-indigo-700">5.1</span> Monitor your trade and record the outcome
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mt-6">
+                    <h3 class="text-xl font-semibold mb-4">Trade Outcome</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Result:</label>
+                            <select id="tradeResult" class="w-full p-2 rounded-md">
+                                <option value="win">Win</option>
+                                <option value="loss">Loss</option>
+                                <option value="breakeven">Break Even</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Exit Price:</label>
+                            <input type="number" id="exitPrice" step="0.0001" class="w-full p-2 rounded-md" placeholder="Exit price">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Profit/Loss ($):</label>
+                            <input type="number" id="profitLoss" step="0.01" class="w-full p-2 rounded-md" placeholder="+/- amount">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quick Notes:</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <div class="quick-note p-2 rounded-md text-center text-sm cursor-pointer hover:bg-gray-100" data-note="Strong volume confirmation">Strong volume</div>
+                            <div class="quick-note p-2 rounded-md text-center text-sm cursor-pointer hover:bg-gray-100" data-note="Weak retest, hesitated">Weak retest</div>
+                            <div class="quick-note p-2 rounded-md text-center text-sm cursor-pointer hover:bg-gray-100" data-note="News affected price">News impact</div>
+                            <div class="quick-note p-2 rounded-md text-center text-sm cursor-pointer hover:bg-gray-100" data-note="Perfect setup">Perfect setup</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Additional Notes:</label>
+                        <textarea id="tradeNotes" class="w-full p-2 rounded-md" rows="3" placeholder="Any extra observations..."></textarea>
+                    </div>
+                    
+                    <button id="completeTradeButton" class="btn btn-success mt-6 w-full sm:w-auto">
+                        <i class="fas fa-check mr-2"></i> Complete Trade
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRADE JOURNAL TAB -->
+        <div id="journal" class="tab-content hidden fade-in">
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold mb-6 text-indigo-700 flex items-center">
+                    <i class="fas fa-book mr-2"></i> Trade Journal
+                </h2>
+                <div id="journalEntries" class="space-y-4">
+                    <!-- Journal entries will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CALENDAR TAB -->
+        <div id="calendar" class="tab-content hidden fade-in">
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold mb-6 text-indigo-700 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2"></i> Trading Calendar
+                </h2>
+                <div class="mb-4">
+                    <p id="currentMonth" class="text-xl font-medium text-center"></p>
+                </div>
+                <div class="grid grid-cols-7 gap-2 text-center mb-2">
+                    <div class="text-sm font-medium">Sun</div>
+                    <div class="text-sm font-medium">Mon</div>
+                    <div class="text-sm font-medium">Tue</div>
+                    <div class="text-sm font-medium">Wed</div>
+                    <div class="text-sm font-medium">Thu</div>
+                    <div class="text-sm font-medium">Fri</div>
+                    <div class="text-sm font-medium">Sat</div>
+                </div>
+                <div id="tradeCalendar" class="grid grid-cols-7 gap-2">
+                    <!-- Calendar will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- STATISTICS TAB -->
+        <div id="stats" class="tab-content hidden fade-in">
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold mb-6 text-indigo-700 flex items-center">
+                    <i class="fas fa-chart-pie mr-2"></i> Trading Statistics
+                </h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="stat-card p-4">
+                        <p class="text-gray-500 text-sm mb-1">Total Trades</p>
+                        <p id="totalTrades" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="stat-card p-4">
+                        <p class="text-gray-500 text-sm mb-1">Win Rate</p>
+                        <p id="winRate" class="text-3xl font-bold text-green-600">0%</p>
+                    </div>
+                    <div class="stat-card p-4">
+                        <p class="text-gray-500 text-sm mb-1">Avg Win</p>
+                        <p id="avgWin" class="text-3xl font-bold text-green-600">$0</p>
+                    </div>
+                    <div class="stat-card p-4">
+                        <p class="text-gray-500 text-sm mb-1">Avg Loss</p>
+                        <p id="avgLoss" class="text-3xl font-bold text-red-600">$0</p>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-semibold mb-4">Recent Performance</h3>
+                <div class="relative h-64 md:h-80">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Win/Loss Ratio</h3>
+                    <div class="relative h-64">
+                        <canvas id="winLossChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        let performanceChart = null;
+        let winLossChart = null;
+        
+        // DOM Elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Trade data structure
+        let currentTrade = {
+            symbol: '',
+            breakoutPrice: 0,
+            breakoutVolume: '',
+            breakoutTime: '',
+            zoneHigh: 0,
+            zoneLow: 0,
+            retestVolume: '',
+            retestPrice: 0,
+            signalType: '',
+            entryPrice: 0,
+            stopLoss: 0,
+            takeProfit: 0,
+            positionSize: 2,
+            result: '',
+            exitPrice: 0,
+            profitLoss: 0,
+            notes: '',
+            date: new Date().toISOString(),
+            edited: false,
+            editReason: ''
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current date and time
+            setCurrentDateTime();
+            
+            loadJournal();
+            generateCalendar();
+            updateStats();
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tab-active'));
+                    tabContents.forEach(c => c.classList.add('hidden'));
+                    
+                    tab.classList.add('tab-active');
+                    document.getElementById(tab.dataset.tab).classList.remove('hidden');
+                    
+                    if (tab.dataset.tab === 'calendar') generateCalendar();
+                    if (tab.dataset.tab === 'journal') loadJournal();
+                    if (tab.dataset.tab === 'stats') updateStats();
+                });
+            });
+            
+            // Quick notes
+            document.querySelectorAll('.quick-note').forEach(note => {
+                note.addEventListener('click', () => {
+                    const textarea = document.getElementById('tradeNotes');
+                    textarea.value += (textarea.value ? '\n' : '') + note.dataset.note;
+                });
+            });
+            
+            // Strategy steps
+            document.getElementById('breakoutButton').addEventListener('click', saveBreakout);
+            document.getElementById('zoneButton').addEventListener('click', saveZone);
+            document.getElementById('retestButton').addEventListener('click', saveRetest);
+            document.getElementById('enterTradeButton').addEventListener('click', enterTrade);
+            document.getElementById('completeTradeButton').addEventListener('click', completeTrade);
+            
+            // Symbol dropdown handling
+            document.getElementById('symbol').addEventListener('change', function() {
+                const customSymbolInput = document.getElementById('customSymbol');
+                if (this.value === 'other') {
+                    customSymbolInput.classList.remove('hidden');
+                } else {
+                    customSymbolInput.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Set current date and time
+        function setCurrentDateTime() {
+            const now = new Date();
+            // Format date and time for datetime-local input
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('breakoutTime').value = formattedDateTime;
+        }
+        
+        // Save breakout details
+        function saveBreakout() {
+            const symbolSelect = document.getElementById('symbol');
+            currentTrade.symbol = symbolSelect.value === 'other' 
+                ? document.getElementById('customSymbol').value 
+                : symbolSelect.value;
+            
+            if (!currentTrade.symbol) {
+                alert('Please select or enter a symbol');
+                return;
+            }
+            
+            currentTrade.breakoutPrice = parseFloat(document.getElementById('breakoutPrice').value);
+            if (isNaN(currentTrade.breakoutPrice) || currentTrade.breakoutPrice <= 0) {
+                alert('Please enter a valid breakout price');
+                return;
+            }
+            
+            currentTrade.breakoutVolume = document.getElementById('breakoutVolume').value;
+            currentTrade.breakoutTime = document.getElementById('breakoutTime').value || new Date().toISOString();
+            
+            document.getElementById('breakoutSection').classList.add('hidden');
+            document.getElementById('zoneSection').classList.remove('hidden');
+        }
+        
+        // Save zone details
+        function saveZone() {
+            currentTrade.zoneHigh = parseFloat(document.getElementById('zoneHigh').value);
+            currentTrade.zoneLow = parseFloat(document.getElementById('zoneLow').value);
+            
+            if (isNaN(currentTrade.zoneHigh) || isNaN(currentTrade.zoneLow)) {
+                alert('Please enter valid zone levels');
+                return;
+            }
+            
+            if (currentTrade.zoneLow >= currentTrade.zoneHigh) {
+                alert('Zone Low must be less than Zone High');
+                return;
+            }
+            
+            document.getElementById('zoneSection').classList.add('hidden');
+            document.getElementById('retestSection').classList.remove('hidden');
+        }
+        
+        // Save retest details
+        function saveRetest() {
+            currentTrade.retestVolume = document.getElementById('retestVolume').value;
+            currentTrade.retestPrice = parseFloat(document.getElementById('retestPrice').value);
+            
+            if (isNaN(currentTrade.retestPrice) || currentTrade.retestPrice <= 0) {
+                alert('Please enter a valid retest price');
+                return;
+            }
+            
+            document.getElementById('retestSection').classList.add('hidden');
+            document.getElementById('confirmationSection').classList.remove('hidden');
+        }
+        
+        // Enter trade
+        function enterTrade() {
+            currentTrade.signalType = document.getElementById('signalType').value;
+            currentTrade.entryPrice = parseFloat(document.getElementById('entryPrice').value);
+            currentTrade.stopLoss = parseFloat(document.getElementById('stopLoss').value);
+            currentTrade.takeProfit = parseFloat(document.getElementById('takeProfit').value);
+            currentTrade.positionSize = parseFloat(document.getElementById('positionSize').value);
+            
+            if (isNaN(currentTrade.entryPrice) || currentTrade.entryPrice <= 0) {
+                alert('Please enter a valid entry price');
+                return;
+            }
+            
+            if (isNaN(currentTrade.stopLoss) || currentTrade.stopLoss <= 0) {
+                alert('Please enter a valid stop loss');
+                return;
+            }
+            
+            if (isNaN(currentTrade.takeProfit) || currentTrade.takeProfit <= 0) {
+                alert('Please enter a valid take profit');
+                return;
+            }
+            
+            document.getElementById('confirmationSection').classList.add('hidden');
+            document.getElementById('managementSection').classList.remove('hidden');
+        }
+        
+        // Complete trade
+        function completeTrade() {
+            currentTrade.result = document.getElementById('tradeResult').value;
+            currentTrade.exitPrice = parseFloat(document.getElementById('exitPrice').value);
+            currentTrade.profitLoss = parseFloat(document.getElementById('profitLoss').value);
+            currentTrade.notes = document.getElementById('tradeNotes').value;
+            currentTrade.date = new Date().toISOString();
+            
+            if (isNaN(currentTrade.exitPrice) || currentTrade.exitPrice <= 0) {
+                alert('Please enter a valid exit price');
+                return;
+            }
+            
+            if (isNaN(currentTrade.profitLoss)) {
+                alert('Please enter a valid profit/loss amount');
+                return;
+            }
+            
+            saveTrade();
+            resetForm();
+            
+            document.getElementById('managementSection').classList.add('hidden');
+            document.getElementById('breakoutSection').classList.remove('hidden');
+            
+            // Switch to journal tab
+            tabs.forEach(t => t.classList.remove('tab-active'));
+            tabContents.forEach(c => c.classList.add('hidden'));
+            document.querySelector('.tab[data-tab="journal"]').classList.add('tab-active');
+            document.getElementById('journal').classList.remove('hidden');
+            
+            loadJournal();
+            updateStats();
+            
+            // Set current date and time for next trade
+            setCurrentDateTime();
+        }
+        
+        // Save trade to localStorage
+        function saveTrade() {
+            let trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+            trades.push(currentTrade);
+            localStorage.setItem('retestTrades', JSON.stringify(trades));
+        }
+        
+        // Load journal entries
+        function loadJournal() {
+            const journalEntries = document.getElementById('journalEntries');
+            journalEntries.innerHTML = '';
+            
+            const trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+            
+            if (trades.length === 0) {
+                journalEntries.innerHTML = '<p class="text-center text-gray-500 py-8">No trades recorded yet.</p>';
+                return;
+            }
+            
+            trades.reverse().forEach((trade, index) => {
+                const entry = document.createElement('div');
+                entry.className = `journal-entry p-4 rounded-lg mb-4 ${trade.result}`;
+                
+                const date = new Date(trade.date).toLocaleString();
+                const profitClass = trade.profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
+                
+                entry.innerHTML = `
+                    <div class="flex flex-wrap justify-between items-start">
+                        <h3 class="text-lg font-semibold">${trade.symbol}</h3>
+                        <span class="text-sm text-gray-500">${date}</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                        <p><span class="font-medium">Result:</span> <span class="${profitClass} font-semibold">${trade.result.toUpperCase()} (${trade.profitLoss >= 0 ? '+' : ''}$${Math.abs(trade.profitLoss).toFixed(2)})</span></p>
+                        <p><span class="font-medium">Entry/Exit:</span> $${trade.entryPrice} → $${trade.exitPrice}</p>
+                        <p><span class="font-medium">Risk:</span> ${trade.positionSize}% of capital</p>
+                        <p><span class="font-medium">Signal:</span> ${trade.signalType}</p>
+                    </div>
+                    <p class="mt-2"><span class="font-medium">Notes:</span> ${trade.notes || 'No notes'}</p>
+                    ${trade.edited ? `<p class="text-xs text-gray-500 italic mt-2">Edited - Reason: ${trade.editReason || 'Not specified'}</p>` : ''}
+                    <div class="flex mt-3 space-x-2">
+                        <button class="btn-primary text-xs py-1 px-2 edit-trade" data-index="${trades.length - 1 - index}">
+                            <i class="fas fa-edit mr-1"></i> Edit
+                        </button>
+                        <button class="btn-danger text-xs py-1 px-2 delete-trade" data-index="${trades.length - 1 - index}">
+                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                        </button>
+                    </div>
+                    <div class="edit-reason-dropdown bg-gray-100 p-3 rounded-md mt-3 hidden" id="edit-reason-${trades.length - 1 - index}">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reason for edit:</label>
+                        <select class="edit-reason-select w-full p-2 rounded-md mb-2">
+                            <option value="">Select a reason</option>
+                            <option value="Typo correction">Typo correction</option>
+                            <option value="Incomplete information">Incomplete information</option>
+                            <option value="Updated trade details">Updated trade details</option>
+                            <option value="Other">Other (specify below)</option>
+                        </select>
+                        <input type="text" class="custom-edit-reason w-full p-2 rounded-md mb-2 hidden" placeholder="Specify reason if 'Other'">
+                        <button class="btn-success text-xs py-1 px-3 save-edit" data-index="${trades.length - 1 - index}">
+                            <i class="fas fa-check mr-1"></i> Save Changes
+                        </button>
+                    </div>
+                `;
+                
+                journalEntries.appendChild(entry);
+            });
+            
+            // Add delete event listeners
+            document.querySelectorAll('.delete-trade').forEach(button => {
+                button.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to delete this trade?')) {
+                        deleteTrade(parseInt(this.dataset.index));
+                    }
+                });
+            });
+            
+            // Add edit event listeners
+            document.querySelectorAll('.edit-trade').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    const editReasonDiv = document.getElementById(`edit-reason-${index}`);
+                    editReasonDiv.classList.toggle('hidden');
+                });
+            });
+            
+            // Handle edit reason selection
+            document.querySelectorAll('.edit-reason-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const customReasonInput = this.closest('.edit-reason-dropdown').querySelector('.custom-edit-reason');
+                    if (this.value === 'Other') {
+                        customReasonInput.classList.remove('hidden');
+                    } else {
+                        customReasonInput.classList.add('hidden');
+                    }
+                });
+            });
+            
+            // Save edit changes
+            document.querySelectorAll('.save-edit').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    const editReasonDiv = document.getElementById(`edit-reason-${index}`);
+                    const reasonSelect = editReasonDiv.querySelector('.edit-reason-select');
+                    const customReason = editReasonDiv.querySelector('.custom-edit-reason');
+                    
+                    let reason = reasonSelect.value;
+                    if (reason === 'Other' && customReason.value) {
+                        reason = customReason.value;
+                    }
+                    
+                    if (reason) {
+                        let trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+                        trades[index].edited = true;
+                        trades[index].editReason = reason;
+                        localStorage.setItem('retestTrades', JSON.stringify(trades));
+                        loadJournal();
+                    } else {
+                        alert('Please select or specify a reason for editing.');
+                    }
+                });
+            });
+        }
+        
+        // Delete a trade
+        function deleteTrade(index) {
+            let trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+            trades.splice(index, 1);
+            localStorage.setItem('retestTrades', JSON.stringify(trades));
+            loadJournal();
+            updateStats();
+            generateCalendar();
+        }
+        
+        // Generate calendar view
+        function generateCalendar() {
+            const calendar = document.getElementById('tradeCalendar');
+            calendar.innerHTML = '';
+            
+            // Get current date info
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const monthName = new Date(year, month).toLocaleString('default', { month: 'long' });
+            document.getElementById('currentMonth').textContent = `${monthName} ${year}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Get trades
+            const trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+            
+            // Add empty cells for days before first of month
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day bg-gray-50';
+                calendar.appendChild(emptyCell);
+            }
+            
+            // Add day cells
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTrades = trades.filter(t => t.date.startsWith(dateStr));
+                
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day bg-white shadow-sm';
+                
+                if (dayTrades.length > 0) {
+                    dayCell.classList.add('has-trades');
+                    
+                    const wins = dayTrades.filter(t => t.result === 'win').length;
+                    const losses = dayTrades.filter(t => t.result === 'loss').length;
+                    const totalPL = dayTrades.reduce((sum, t) => sum + t.profitLoss, 0);
+                    
+                    dayCell.innerHTML = `
+                        <div class="font-medium">${day}</div>
+                        <div class="text-xs mt-1 ${totalPL >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${totalPL >= 0 ? '+' : ''}$${Math.abs(totalPL).toFixed(2)}
+                        </div>
+                        <div class="text-xs mt-1">
+                            <span class="text-green-600">${wins}</span>/<span class="text-red-600">${losses}</span>
+                        </div>
+                    `;
+                    
+                    dayCell.addEventListener('click', () => {
+                        const tradeDetails = dayTrades.map(t => 
+                            `${t.symbol} - ${t.result.toUpperCase()} (${t.profitLoss >= 0 ? '+' : ''}$${Math.abs(t.profitLoss).toFixed(2)})`
+                        ).join('\n');
+                        
+                        alert(`Trades on ${dateStr}:\n${tradeDetails}`);
+                    });
+                } else {
+                    dayCell.innerHTML = `<div class="font-medium text-gray-500">${day}</div>`;
+                }
+                
+                // Highlight current day
+                if (day === now.getDate() && month === now.getMonth() && year === now.getFullYear()) {
+                    dayCell.classList.add('border-2', 'border-indigo-500');
+                }
+                
+                calendar.appendChild(dayCell);
+            }
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const trades = JSON.parse(localStorage.getItem('retestTrades')) || [];
+            const wins = trades.filter(t => t.result === 'win').length;
+            const losses = trades.filter(t => t.result === 'loss').length;
+            const winTrades = trades.filter(t => t.result === 'win');
+            const lossTrades = trades.filter(t => t.result === 'loss');
+            
+            document.getElementById('totalTrades').textContent = trades.length;
+            document.getElementById('winRate').textContent = trades.length > 0 
+                ? `${Math.round((wins / trades.length) * 100)}%` 
+                : '0%';
+                
+            document.getElementById('avgWin').textContent = winTrades.length > 0
+                ? `$${Math.abs(winTrades.reduce((sum, t) => sum + t.profitLoss, 0) / winTrades.length).toFixed(2)}`
+                : '$0';
+                
+            document.getElementById('avgLoss').textContent = lossTrades.length > 0
+                ? `$${Math.abs(lossTrades.reduce((sum, t) => sum + t.profitLoss, 0) / lossTrades.length).toFixed(2)}`
+                : '$0';
+            
+            // Create performance chart
+            createPerformanceChart(trades);
+            
+            // Create win/loss chart
+            createWinLossChart(trades);
+        }
+        
+        // Create performance chart
+        function createPerformanceChart(trades) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Take last 10 trades or all if less than 10
+            const last10 = trades.slice(-10);
+            const labels = last10.map((_, i) => `Trade ${i + 1}`);
+            const data = last10.map(t => t.profitLoss);
+            
+            const borderColors = data.map(value => value >= 0 ? '#10b981' : '#ef4444');
+            const backgroundColor = data.map(value => value >= 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            performanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit/Loss ($)',
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: borderColors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', {
+                                            style: 'currency',
+                                            currency: 'USD'
+                                        }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create win/loss chart
+        function createWinLossChart(trades) {
+            if (trades.length === 0) return;
+            
+            const ctx = document.getElementById('winLossChart').getContext('2d');
+            
+            const wins = trades.filter(t => t.result === 'win').length;
+            const losses = trades.filter(t => t.result === 'loss').length;
+            const breakEven = trades.filter(t => t.result === 'breakeven').length;
+            
+            if (winLossChart) {
+                winLossChart.destroy();
+            }
+            
+            winLossChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Win', 'Loss', 'Break Even'],
+                    datasets: [{
+                        data: [wins, losses, breakEven],
+                        backgroundColor: [
+                            '#10b981',
+                            '#ef4444',
+                            '#f59e0b'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+        
+        // Reset form for new trade
+        function resetForm() {
+            document.getElementById('symbol').value = '';
+            document.getElementById('customSymbol').value = '';
+            document.getElementById('customSymbol').classList.add('hidden');
+            document.getElementById('breakoutPrice').value = '';
+            document.getElementById('zoneHigh').value = '';
+            document.getElementById('zoneLow').value = '';
+            document.getElementById('retestPrice').value = '';
+            document.getElementById('entryPrice').value = '';
+            document.getElementById('stopLoss').value = '';
+            document.getElementById('takeProfit').value = '';
+            document.getElementById('positionSize').value = '2';
+            document.getElementById('exitPrice').value = '';
+            document.getElementById('profitLoss').value = '';
+            document.getElementById('tradeNotes').value = '';
+            
+            currentTrade = {
+                symbol: '',
+                breakoutPrice: 0,
+                breakoutVolume: '',
+                breakoutTime: '',
+                zoneHigh: 0,
+                zoneLow: 0,
+                retestVolume: '',
+                retestPrice: 0,
+                signalType: '',
+                entryPrice: 0,
+                stopLoss: 0,
+                takeProfit: 0,
+                positionSize: 2,
+                result: '',
+                exitPrice: 0,
+                profitLoss: 0,
+                notes: '',
+                date: new Date().toISOString(),
+                edited: false,
+                editReason: ''
+            };
+        }
+    </script>
+</body>
+</html>
